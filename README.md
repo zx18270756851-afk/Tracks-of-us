@@ -1,1 +1,2 @@
-This is tracks
+将轨迹数据和要显示的文本、图片链接填入data_tracks.csv
+打开html文件，即可得到专属的轨迹可视化网页。
