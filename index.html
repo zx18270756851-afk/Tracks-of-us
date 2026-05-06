@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>一周年纪念❤️我们的轨迹</title>
+    <!-- Mapbox 核心库 -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+    <!-- PapaParse 核心库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <style>
+        body { margin: 0; padding: 0; font-family: "PingFang SC", "Helvetica Neue", serif; background: #0b0d17; color: white; overflow: hidden; touch-action: pan-y; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 0; }
+        
+        #story { position: absolute; width: 35%; height: 100%; overflow-y: scroll; background: linear-gradient(90deg, rgba(11,13,23,0.95) 0%, rgba(11,13,23,0.6) 70%, transparent 100%); z-index: 10; display: none; }
+        #story::-webkit-scrollbar { display: none; }
+        #story { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .chapter { padding: 0 50px; box-sizing: border-box; opacity: 0.2; transition: opacity 1s ease-in-out; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+        .chapter.active { opacity: 1; }
+        
+        #story.cinematic-mode .chapter { opacity: 0.85 !important; transition: none; }
+
+        h2 { color: #fff; margin-bottom: 10px; font-size: 2.2em; font-weight: 300; letter-spacing: 2px; text-shadow: 0 0 15px rgba(233, 69, 96, 0.6); }
+        .date { color: #e94560; font-family: "Courier New", monospace; margin-bottom: 20px; font-size: 1.1em; letter-spacing: 1px; }
+        p { line-height: 1.8; color: #eee; font-size: 1.1em; font-weight: 300; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+
+        .story-image { 
+            width: 100%; height: auto; max-height: 45vh; object-fit: contain; border-radius: 8px; margin-bottom: 20px; 
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 85%, rgba(0,0,0,0) 100%); 
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 85%, rgba(0,0,0,0) 100%); 
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); opacity: 0.95; transition: opacity 0.4s, transform 0.4s; 
+        }
+        .story-image:hover { opacity: 1; transform: scale(1.02); -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 95%, rgba(0,0,0,0) 100%); }
+
+        .marker-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 15px currentColor; }
+        .marker-a { background-color: #00d2ff; color: #00d2ff; animation: pulseA 2s infinite cubic-bezier(0.4, 0, 0.2, 1); }
+        .marker-b { background-color: #ff0055; color: #ff0055; animation: pulseB 2s infinite cubic-bezier(0.4, 0, 0.2, 1); animation-delay: 0.5s; }
+        @keyframes pulseA { 0% { box-shadow: 0 0 0 0 rgba(0, 210, 255, 0.6); } 70% { box-shadow: 0 0 0 20px rgba(0, 210, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 210, 255, 0); } }
+        @keyframes pulseB { 0% { box-shadow: 0 0 0 0 rgba(255, 0, 85, 0.6); } 70% { box-shadow: 0 0 0 20px rgba(255, 0, 85, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 0, 85, 0); } }
+
+        #scroll-guide { position: fixed; bottom: 30px; left: 17.5%; transform: translateX(-50%); text-align: center; z-index: 20; opacity: 0.6; transition: opacity 0.5s; pointer-events: none; display: none; animation: bounce 2s infinite ease-in-out; }
+        #scroll-guide span { display: block; font-size: 0.85em; color: #aaa; letter-spacing: 2px; font-weight: 300; margin-bottom: 5px; }
+        #scroll-guide svg { width: 24px; height: 24px; fill: #aaa; }
+        #scroll-guide.outro-mode svg { display: none; } 
+        @keyframes bounce { 0%, 100% { transform: translate(-50%, 0); opacity: 0.4; } 50% { transform: translate(-50%, 10px); opacity: 0.8; } }
+
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0d17; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        #loading-overlay h1 { font-weight: 300; letter-spacing: 2px; background: linear-gradient(135deg, #fff 0%, #ffabc9 50%, #76dfff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
+        .spinner { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #e94560; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #music-btn { position: fixed; top: 30px; right: 30px; width: 45px; height: 45px; background: rgba(11, 13, 23, 0.7); border: 2px solid #e94560; border-radius: 50%; cursor: pointer; z-index: 50; display: flex; justify-content: center; align-items: center; opacity: 0.5; transition: opacity 0.3s, transform 0.3s; box-shadow: 0 0 10px rgba(233, 69, 96, 0.3); }
+        #music-btn:hover { transform: scale(1.1); }
+        #music-btn svg { width: 22px; height: 22px; fill: #e94560; }
+        .playing { animation: spin 4s linear infinite; opacity: 1 !important; box-shadow: 0 0 20px rgba(233, 69, 96, 0.8) !important; }
+
+        /* ================= 移动端深度适配 (Media Queries) ================= */
+        @media (max-width: 768px) {
+            #story { 
+                width: 100%; 
+                height: 50vh; /* 严格固定占据屏幕下半部分 50% */
+                top: auto; 
+                bottom: 0; 
+                background: linear-gradient(180deg, transparent 0%, rgba(11,13,23,0.95) 15%, rgba(11,13,23,1) 100%); 
+            }
+            .chapter { padding: 0 25px; min-height: 50vh; justify-content: flex-start; padding-top: 35px; }
+            h2 { font-size: 1.8em; }
+            p { font-size: 1em; line-height: 1.6; }
+            .story-image { max-height: 22vh; margin-bottom: 15px; }
+            #scroll-guide { left: 50%; bottom: 52vh; width: 100%; } 
+            #music-btn { top: 20px; right: 20px; width: 38px; height: 38px; }
+            #music-btn svg { width: 18px; height: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+<audio id="bgm" loop preload="auto"></audio>
+<div id="music-btn" title="播放/暂停音乐">
+    <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+</div>
+
+<div id="loading-overlay">
+    <h1 id="loading-text">正在同步轨迹...</h1>
+    <div class="spinner" id="loading-spinner"></div>
+</div>
+
+<div id="scroll-guide">
+    <span id="guide-text">滑动或按方向键开启轨迹</span>
+    <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+</div>
+
+<div id="story"></div>
+<div id="map"></div>
+
+<script>
+    // --- BGM 控制 ---
+    const bgm = document.getElementById('bgm');
+    const bgmTimestamp = new Date().getTime();
+    bgm.src = `https://cdn.jsdelivr.net/gh/zx18270756851-afk/Tracks-of-us@main/bgm.mp3?t=${bgmTimestamp}`;
+    bgm.volume = 0.3; bgm.loop = true;
+    
+    const musicBtn = document.getElementById('music-btn');
+    let isPlaying = false;
+    function toggleMusic() {
+        if (isPlaying) { bgm.pause(); musicBtn.classList.remove('playing'); } 
+        else { bgm.play().catch(() => {}); musicBtn.classList.add('playing'); }
+        isPlaying = !isPlaying;
+    }
+    musicBtn.addEventListener('click', toggleMusic);
+    const initAudio = () => { if (!isPlaying) { toggleMusic(); } ['click', 'keydown', 'touchstart'].forEach(evt => document.body.removeEventListener(evt, initAudio)); };
+    ['click', 'keydown', 'touchstart'].forEach(evt => document.body.addEventListener(evt, initAudio, { once: true }));
+
+    // --- Mapbox 初始化 ---
+    mapboxgl.accessToken = 'pk.eyJ1IjoicWloZWphc29uIiwiYSI6ImNtb29rZDM4ejFjMXAycXE0MHUxNzB3YnMifQ.FwSxRckEAmVAhtyPM38Elw';
+    const map = new mapboxgl.Map({ container: 'map', style: 'mapbox://styles/mapbox/dark-v11', projection: 'globe', center: [117.2000, 39.0500], zoom: 1.5, pitch: 10 });
+
+    // --- 全局状态机 ---
+    let currentState = 'INTRO'; 
+    let isMobile = window.innerWidth <= 768;
+    
+    let tracksData = []; 
+    let activeChapterIndex = -1; 
+    const storyContainer = document.getElementById('story');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const guideUI = document.getElementById('scroll-guide');
+    const guideText = document.getElementById('guide-text');
+    let markerA, markerB;
+
+    let spinAnimationReq;
+    let outroTimeout;
+    let originalScrollHeight = 0;
+    let isCloned = false; 
+
+    // 监听窗口大小变化以实时调整移动端判定
+    window.addEventListener('resize', () => { isMobile = window.innerWidth <= 768; });
+
+    function calculateDistance(coord1, coord2) {
+        const R = 6371; const dLat = (coord2[1] - coord1[1]) * Math.PI / 180; const dLon = (coord2[0] - coord1[0]) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(coord1[1] * Math.PI / 180) * Math.cos(coord2[1] * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    }
+
+    map.on('style.load', () => {
+        map.setFog({ 'color': 'rgb(11, 13, 23)', 'high-color': '#1a0b2e', 'space-color': '#000000', 'star-intensity': 0.8 });
+        
+        function addGlowingLine(id, color) {
+            map.addSource(id, { 'type': 'geojson', 'data': { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': [] } } });
+            map.addLayer({ 'id': id + '-glow', 'type': 'line', 'source': id, 'paint': { 'line-color': color, 'line-width': 8, 'line-opacity': 0.3, 'line-blur': 6 } });
+            map.addLayer({ 'id': id + '-core', 'type': 'line', 'source': id, 'paint': { 'line-color': '#ffffff', 'line-width': 2, 'line-opacity': 0.9 } });
+        }
+        addGlowingLine('traceA', '#00d2ff'); addGlowingLine('traceB', '#ff0055');
+
+        const elA = document.createElement('div'); elA.className = 'marker-dot marker-a'; elA.style.display = 'none'; 
+        const elB = document.createElement('div'); elB.className = 'marker-dot marker-b'; elB.style.display = 'none';
+        markerA = new mapboxgl.Marker({ element: elA }).setLngLat([0, 0]).addTo(map);
+        markerB = new mapboxgl.Marker({ element: elB }).setLngLat([0, 0]).addTo(map);
+
+        Papa.parse(`https://raw.githubusercontent.com/zx18270756851-afk/Tracks-of-us/main/data_tracks.csv?t=${new Date().getTime()}`, {
+            download: true, header: true, skipEmptyLines: true,
+            complete: function(results) {
+                if(results.data.length === 0) return;
+                tracksData = results.data.map(row => ({
+                    date: row.Date ? row.Date.trim() : "", title: row.Event_Title || "未命名节点",
+                    meCoords: [parseFloat(row.Me_Lon) || 0, parseFloat(row.Me_Lat) || 0],
+                    youCoords: [parseFloat(row.You_Lon) || 0, parseFloat(row.You_Lat) || 0],
+                    image: row.Figure ? row.Figure : "", description: row.Description || ""
+                })).filter(item => item.meCoords[0] !== 0); 
+                initStoryEngine();
+            }
+        });
+    });
+
+    function initStoryEngine() {
+        loadingOverlay.style.display = 'none'; storyContainer.style.display = 'block'; guideUI.style.display = 'block';
+
+        tracksData.forEach((item, index) => {
+            const section = document.createElement('section');
+            section.className = index === 0 ? 'chapter active' : 'chapter'; section.id = `chap${index}`;
+            let htmlContent = `<h2>${item.title}</h2>`;
+            if (item.date) htmlContent += `<div class="date">${item.date}</div>`;
+            if (item.image && item.image.trim() !== "") htmlContent += `<img src="${item.image}" class="story-image" onerror="if(!this.dataset.retried){ this.dataset.retried=true; this.src = this.src.match(/\\.jpg$/i) ? (this.src.endsWith('.jpg') ? this.src.replace('.jpg', '.JPG') : this.src.replace('.JPG', '.jpg')) : this.src; } else { this.style.display='none'; }">`;
+            htmlContent += `<p>${item.description}</p>`; section.innerHTML = htmlContent;
+            storyContainer.appendChild(section);
+        });
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const index = parseInt(entry.target.id.replace('chap', ''));
+                    if (currentState === 'STORY' && index !== activeChapterIndex) {
+                        updateMapAndViewport(index);
+                    }
+                }
+            });
+        }, { root: storyContainer, rootMargin: '-49% 0px -49% 0px' });
+        document.querySelectorAll('.chapter').forEach(chap => observer.observe(chap));
+
+        startIntroCinematic(); 
+    }
+
+    // --- 阶段 1: 开场宏观地球自转 ---
+    function startIntroCinematic() {
+        currentState = 'INTRO';
+        storyContainer.style.pointerEvents = 'none'; 
+        guideText.innerText = "滑动或按方向键开启轨迹";
+        
+        let lastTime = performance.now();
+        function spin(now) {
+            if (currentState !== 'INTRO') return;
+            const dt = Math.min(now - lastTime, 100); lastTime = now;
+            const center = map.getCenter(); center.lng += (dt * 0.003); map.setCenter(center);
+            spinAnimationReq = requestAnimationFrame(spin);
+        }
+        spinAnimationReq = requestAnimationFrame(spin);
+    }
+
+    // --- 阶段 2: 退出开场，聚焦首页 ---
+    function exitIntroToStory() {
+        currentState = 'STORY';
+        cancelAnimationFrame(spinAnimationReq);
+        storyContainer.style.pointerEvents = 'auto'; 
+        
+        markerA.getElement().style.display = 'block';
+        markerB.getElement().style.display = 'block';
+        markerA.setLngLat(tracksData[0].meCoords);
+        markerB.setLngLat(tracksData[0].youCoords);
+        
+        updateMapAndViewport(0); 
+    }
+
+    function buildHistory(endIndex, key, currentOffset) {
+        const history = [];
+        for (let i = 0; i <= endIndex; i++) {
+            let pos = key === 'a' ? [...tracksData[i].meCoords] : [...tracksData[i].youCoords];
+            if (tracksData[i].meCoords[0] === tracksData[i].youCoords[0] && tracksData[i].meCoords[1] === tracksData[i].youCoords[1]) {
+                if(key === 'a') pos[0] -= currentOffset; else pos[0] += currentOffset;
+            }
+            history.push(pos);
+        }
+        return history;
+    }
+
+    function animateMarker(marker, startPos, endPos, duration, traceId, baseHistory) {
+        if (marker.animationReq) cancelAnimationFrame(marker.animationReq);
+        if (startPos[0] === endPos[0] && startPos[1] === endPos[1]) {
+            marker.setLngLat(endPos);
+            if (map.getSource(traceId)) map.getSource(traceId).setData({ 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': [...baseHistory, endPos] } });
+            return;
+        }
+        const startTime = performance.now();
+        function frame(now) {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const easedProgress = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+            const lng = startPos[0] + (endPos[0] - startPos[0]) * easedProgress; const lat = startPos[1] + (endPos[1] - startPos[1]) * easedProgress;
+            marker.setLngLat([lng, lat]);
+            if (map.getSource(traceId)) map.getSource(traceId).setData({ 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': [...baseHistory, [lng, lat]] } });
+            if (progress < 1) marker.animationReq = requestAnimationFrame(frame);
+        }
+        marker.animationReq = requestAnimationFrame(frame);
+    }
+    
+    function updateMapAndViewport(index) {
+        if (index === activeChapterIndex) return; 
+        map.stop(); 
+
+        const chapters = document.querySelectorAll('.chapter');
+        chapters.forEach(c => c.classList.remove('active'));
+        if(chapters[index]) chapters[index].classList.add('active');
+        
+        let nextPosA = [...tracksData[index].meCoords]; let nextPosB = [...tracksData[index].youCoords];
+        const moveDist = index > 0 ? calculateDistance(tracksData[index-1].meCoords, nextPosA) : 0;
+        
+        let animDuration = 4000; let targetPitch = 45; let maxZoomLevel = 5; let currentOffset = 0.05; 
+        if (moveDist < 50) { animDuration = 2500; targetPitch = 60; maxZoomLevel = 10; currentOffset = 0.005; } 
+        else if (moveDist > 5000) { animDuration = 6500; targetPitch = 20; maxZoomLevel = 3; currentOffset = 0.15; } 
+        else { animDuration = 4500; targetPitch = 45; maxZoomLevel = 5; currentOffset = 0.05; }
+
+        if (nextPosA[0] === nextPosB[0] && nextPosA[1] === nextPosB[1]) { nextPosA[0] -= currentOffset; nextPosB[0] += currentOffset; }
+
+        const baseHistoryA = index > 0 ? buildHistory(index - 1, 'a', currentOffset) : [];
+        const baseHistoryB = index > 0 ? buildHistory(index - 1, 'b', currentOffset) : [];
+
+        let startPosA = markerA.getLngLat() ? [markerA.getLngLat().lng, markerA.getLngLat().lat] : nextPosA;
+        let startPosB = markerB.getLngLat() ? [markerB.getLngLat().lng, markerB.getLngLat().lat] : nextPosB;
+
+        animateMarker(markerA, startPosA, nextPosA, animDuration, 'traceA', baseHistoryA);
+        animateMarker(markerB, startPosB, nextPosB, animDuration, 'traceB', baseHistoryB);
+
+        activeChapterIndex = index;
+
+        // --- 核心修复：极致精确的物理坐标推算 (防 Mapbox 机制吞并) ---
+        const mapH = map.getContainer().clientHeight;
+        
+        let mapPadding = isMobile 
+            // 手机端：顶部留空 30px，底部留空地图整体高度的 55%。
+            // 这绝对保证坐标处于整体画面 top 20%~25% 的高空区间，彻底远离下半部 50% 的文字！
+            ? { top: 30, bottom: mapH * 0.55, left: 30, right: 30 } 
+            : { top: 150, bottom: 150, left: window.innerWidth * 0.4, right: 100 }; 
+
+        const bounds = new mapboxgl.LngLatBounds().extend(nextPosA).extend(nextPosB);
+        map.fitBounds(bounds, { padding: mapPadding, duration: animDuration * 1.35, maxZoom: maxZoomLevel, pitch: targetPitch, essential: true });
+
+        // 智能引导提示词
+        if (index > 0 && index < tracksData.length - 1) { 
+            guideUI.style.opacity = '0'; 
+        } else if (index === 0) { 
+            guideText.innerText = "滑动或按方向键浏览";
+            guideUI.style.opacity = '0.6'; 
+        } else if (index === tracksData.length - 1) {
+            guideText.innerText = "继续向下以开启尾声";
+            guideUI.style.opacity = '0.6'; 
+        }
+    }
+
+    // --- 阶段 3: 电影级循环尾声 ---
+    function startCinematicSequence() {
+        if (currentState === 'OUTRO') return;
+        currentState = 'OUTRO';
+
+        storyContainer.classList.add('cinematic-mode'); 
+        storyContainer.style.pointerEvents = 'none'; 
+        
+        guideUI.classList.add('outro-mode'); guideText.innerText = 'The End'; guideUI.style.opacity = '0.6'; guideUI.style.display = 'block';
+
+        if (!isCloned) {
+            originalScrollHeight = storyContainer.scrollHeight;
+            const children = Array.from(storyContainer.children);
+            children.forEach(child => { const clone = child.cloneNode(true); clone.removeAttribute('id'); storyContainer.appendChild(clone); });
+            isCloned = true;
+        }
+
+        let avgLng = (tracksData[activeChapterIndex].meCoords[0] + tracksData[activeChapterIndex].youCoords[0]) / 2;
+        let avgLat = (tracksData[activeChapterIndex].meCoords[1] + tracksData[activeChapterIndex].youCoords[1]) / 2;
+        
+        const mapH = map.getContainer().clientHeight;
+        const outroPadding = isMobile ? { top: 0, bottom: mapH * 0.5, left: 0, right: 0 } : { top: 0, bottom: 0, left: window.innerWidth * 0.4, right: 0 };
+        
+        map.stop();
+        map.flyTo({ zoom: 1.8, pitch: 15, center: [avgLng, avgLat], padding: outroPadding, duration: 3500, essential: true });
+
+        let floatScrollTop = storyContainer.scrollTop; 
+        outroTimeout = setTimeout(() => {
+            let lastTime = performance.now();
+            function animateOutro(now) {
+                if (currentState !== 'OUTRO') return;
+                const dt = Math.min(now - lastTime, 100); lastTime = now;
+                
+                const center = map.getCenter(); center.lng += (dt * 0.003); map.setCenter(center);
+                floatScrollTop += (dt * 0.04);
+                
+                if (floatScrollTop >= originalScrollHeight) { floatScrollTop -= originalScrollHeight; }
+                storyContainer.scrollTop = Math.round(floatScrollTop);
+                
+                spinAnimationReq = requestAnimationFrame(animateOutro);
+            }
+            spinAnimationReq = requestAnimationFrame(animateOutro);
+        }, 3600); 
+    }
+
+    // 打断尾声：强硬回退防锁死
+    function exitCinematicSequence() {
+        currentState = 'EXITING'; // 设立中间状态缓冲区
+        cancelAnimationFrame(spinAnimationReq); clearTimeout(outroTimeout); map.stop();
+        
+        storyContainer.classList.remove('cinematic-mode'); 
+        
+        guideUI.classList.remove('outro-mode'); guideText.innerText = '滑动或按方向键浏览'; guideUI.style.opacity = '0'; 
+        
+        if (isCloned) {
+            const chapters = document.querySelectorAll('.chapter');
+            for (let i = tracksData.length; i < chapters.length; i++) { chapters[i].remove(); }
+            isCloned = false;
+        }
+        
+        const chapters = document.querySelectorAll('.chapter'); 
+        chapters[tracksData.length - 1].scrollIntoView({ behavior: 'auto', block: 'center' });
+        
+        setTimeout(() => {
+            storyContainer.style.pointerEvents = 'auto'; 
+            activeChapterIndex = -1; 
+            updateMapAndViewport(tracksData.length - 1);
+            currentState = 'STORY'; 
+        }, 100);
+    }
+
+    // --- 物理外设事件监听路由 ---
+    // 1. PC 鼠标滚轮逻辑
+    window.addEventListener('wheel', (e) => {
+        if (!tracksData.length) return;
+        if (currentState === 'INTRO' && e.deltaY > 0) { exitIntroToStory(); return; } 
+        if (currentState === 'OUTRO' && e.deltaY < 0) { exitCinematicSequence(); return; } 
+        
+        if (currentState === 'STORY' && activeChapterIndex === tracksData.length - 1 && e.deltaY > 0) {
+            // 需要真正的滚轮发力才触发尾声，防止被判定吞吐
+            if (storyContainer.scrollTop + storyContainer.clientHeight >= storyContainer.scrollHeight - 10) { startCinematicSequence(); }
+        }
+    }, { passive: true });
+
+    // 2. 移动端触摸滑屏逻辑 (Swipe)
+    let touchStartY = 0;
+    window.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, {passive: true});
+    window.addEventListener('touchend', e => {
+        if (!tracksData.length) return;
+        const touchEndY = e.changedTouches[0].clientY;
+        const deltaY = touchStartY - touchEndY; // deltaY > 0 为向上拉动页面
+        
+        if (currentState === 'INTRO' && deltaY > 30) { exitIntroToStory(); return; }
+        if (currentState === 'OUTRO' && Math.abs(deltaY) > 30) { exitCinematicSequence(); return; }
+
+        if (currentState === 'STORY' && activeChapterIndex === tracksData.length - 1 && deltaY > 30) {
+            if (storyContainer.scrollTop + storyContainer.clientHeight >= storyContainer.scrollHeight - 10) { startCinematicSequence(); }
+        }
+    }, {passive: true});
+
+    // 3. 键盘按键逻辑
+    document.addEventListener('keydown', (event) => {
+        if(!tracksData.length) return; 
+        
+        if (currentState === 'INTRO') {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowRight' || event.key === 'Enter' || event.key === ' ') { exitIntroToStory(); event.preventDefault(); }
+            return;
+        }
+
+        if (currentState === 'OUTRO') {
+            if (event.key.startsWith('Arrow')) { exitCinematicSequence(); event.preventDefault(); }
+            return;
+        }
+
+        if (currentState === 'STORY' && activeChapterIndex === tracksData.length - 1 && (event.key === 'ArrowDown' || event.key === 'ArrowRight')) {
+            startCinematicSequence(); event.preventDefault(); return;
+        }
+
+        // 常规导航
+        let newIndex = activeChapterIndex;
+        if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') { newIndex = Math.max(0, activeChapterIndex - 1); event.preventDefault(); } 
+        else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') { newIndex = Math.min(tracksData.length - 1, activeChapterIndex + 1); event.preventDefault(); }
+        
+        if (newIndex !== activeChapterIndex) {
+            const chapters = document.querySelectorAll('.chapter'); 
+            chapters[newIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+
+</script>
+</body>
+</html>
